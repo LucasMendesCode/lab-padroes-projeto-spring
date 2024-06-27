@@ -2,17 +2,15 @@ package one.digitalinnovation.gof.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+import javax.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import one.digitalinnovation.gof.model.Cliente;
 import one.digitalinnovation.gof.service.ClienteService;
+import org.springframework.http.HttpStatus;
+
 
 /**
  * Esse {@link RestController} representa nossa <b>Facade</b>, pois abstrai toda
@@ -23,36 +21,62 @@ import one.digitalinnovation.gof.service.ClienteService;
  */
 @RestController
 @RequestMapping("clientes")
+@Api(value = "Cliente API", tags = "Cliente")
 public class ClienteRestController {
+
+	private static final Logger LOGGER = LoggerFactory.getLogger(ClienteRestController.class);
 
 	@Autowired
 	private ClienteService clienteService;
 
 	@GetMapping
+	@ApiOperation(value = "Busca todos os clientes")
 	public ResponseEntity<Iterable<Cliente>> buscarTodos() {
+		LOGGER.info("Buscando todos os clientes");
 		return ResponseEntity.ok(clienteService.buscarTodos());
 	}
 
 	@GetMapping("/{id}")
+	@ApiOperation(value = "Busca um cliente por ID")
 	public ResponseEntity<Cliente> buscarPorId(@PathVariable Long id) {
-		return ResponseEntity.ok(clienteService.buscarPorId(id));
+		try {
+			Cliente cliente = clienteService.buscarPorId(id);
+			return ResponseEntity.ok(cliente);
+		} catch (Exception e) {
+			LOGGER.error("Erro ao buscar cliente com ID {}", id, e);
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Cliente não encontrado", e);
+		}
 	}
 
 	@PostMapping
-	public ResponseEntity<Cliente> inserir(@RequestBody Cliente cliente) {
+	@ApiOperation(value = "Insere um novo cliente")
+	public ResponseEntity<Cliente> inserir(@Valid @RequestBody Cliente cliente) {
+		LOGGER.info("Inserindo cliente: {}", cliente);
 		clienteService.inserir(cliente);
-		return ResponseEntity.ok(cliente);
+		return ResponseEntity.status(HttpStatus.CREATED).body(cliente);
 	}
 
 	@PutMapping("/{id}")
-	public ResponseEntity<Cliente> atualizar(@PathVariable Long id, @RequestBody Cliente cliente) {
-		clienteService.atualizar(id, cliente);
-		return ResponseEntity.ok(cliente);
+	@ApiOperation(value = "Atualiza um cliente existente")
+	public ResponseEntity<Cliente> atualizar(@PathVariable Long id, @Valid @RequestBody Cliente cliente) {
+		try {
+			clienteService.atualizar(id, cliente);
+			return ResponseEntity.ok(cliente);
+		} catch (Exception e) {
+			LOGGER.error("Erro ao atualizar cliente com ID {}", id, e);
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Cliente não encontrado", e);
+		}
 	}
 
 	@DeleteMapping("/{id}")
+	@ApiOperation(value = "Deleta um cliente por ID")
 	public ResponseEntity<Void> deletar(@PathVariable Long id) {
-		clienteService.deletar(id);
-		return ResponseEntity.ok().build();
+		try {
+			clienteService.deletar(id);
+			return ResponseEntity.noContent().build();
+		} catch (Exception e) {
+			LOGGER.error("Erro ao deletar cliente com ID {}", id, e);
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Cliente não encontrado", e);
+		}
 	}
 }
